@@ -1,0 +1,4 @@
+﻿product_id,course_id,session_no,detected_type,detected_keyword,source_clip_names,practice_project_summary_draft,expected_output_draft,bo_decision,review_comment,status
+PRODUCT-SAMPLE,KDC-SAMPLE-001,1,PRACTICE,실습,Ch 3. 개발전 기초 실습 - PRD | Ch 4. 개발전 기초 실습 - Requirements 문서 활용,PRD와 Requirements 문서를 활용하여 AI 기반 개발 전 필요한 기획 문서와 요구사항 문서의 작성 방식을 학습하는 실습성 차시로 볼 수 있다.,PRD 또는 Requirements 문서 초안,,,REVIEW_PENDING
+PRODUCT-SAMPLE,KDC-SAMPLE-001,2,PROJECT,프로젝트,"Part 2. 프로젝트 1 - 투두리스트 | 02. 투두리스트 프로젝트 세팅하기 (PRD, Require) | 03. 본격적으로 투두리스트 웹사이트 만들기","Firebase를 활용하여 투두리스트 웹사이트를 제작하는 프로젝트형 차시이다. 프로젝트 세팅, 웹사이트 구현, 데이터베이스 연결을 통해 서비스 제작 흐름을 경험한다.",Firebase 데이터베이스가 연결된 투두리스트 웹사이트,,,REVIEW_PENDING
+PRODUCT-SAMPLE,KDC-SAMPLE-001,3,PROJECT,프로젝트,Part 3. 프로젝트 2 - v0 + Cursor로 만드는 매력적인 랜딩페이지 제작 | Ch 2. 랜딩페이지 제작,"v0와 Cursor를 활용하여 랜딩페이지를 제작하고, tally 폼 및 Firebase 호스팅을 통해 고객 정보 수집과 배포 흐름을 경험하는 프로젝트형 차시이다.",고객 정보 수집 폼이 포함된 랜딩페이지,,,REVIEW_PENDING

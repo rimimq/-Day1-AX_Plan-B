@@ -1,0 +1,2 @@
+﻿product_id,product_name,course_id,course_name,business_unit,owner,target_learning_minutes,cr_row_count,session_count,draft_status,last_run_id,updated_at
+PRODUCT-SAMPLE,Cursor AI 마스터 패키지,KDC-SAMPLE-001,지금 당장 나만의 서비스 런칭! 13가지 초!고퀄리티 웹 서비스로 Cursor AI 마스터,B2C,,60,21,3,REVIEW_PENDING,SAMPLE-RUN-001,2026-06-05 10:50:10

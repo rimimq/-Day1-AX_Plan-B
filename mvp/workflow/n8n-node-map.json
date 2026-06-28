@@ -1,0 +1,97 @@
+{
+  "workflow_name": "Plan-B 1차 MVP",
+  "version": "0.1.0",
+  "nodes": [
+    {
+      "id": "manual_trigger",
+      "type": "Manual Trigger",
+      "purpose": "BO 또는 기획자가 샘플 product_id + course_id 단위로 초안 생성을 실행한다."
+    },
+    {
+      "id": "read_cr_input",
+      "type": "Google Sheets Read",
+      "purpose": "CR_INPUT 시트에서 status=PENDING 행을 읽는다.",
+      "input": "Google Spreadsheet",
+      "output": "cr_rows"
+    },
+    {
+      "id": "group_by_course",
+      "type": "Code",
+      "purpose": "product_id + course_id 기준으로 CR 행을 그룹화한다.",
+      "input": "cr_rows",
+      "output": "course_payload_candidates"
+    },
+    {
+      "id": "validate_required_fields",
+      "type": "IF + Code",
+      "purpose": "product_id, course_id, course_name, session_no, clip_name, clip_duration 필수값을 검증한다.",
+      "input": "course_payload_candidates",
+      "output": "valid_payloads or validation_errors"
+    },
+    {
+      "id": "mark_generating",
+      "type": "Google Sheets Update",
+      "purpose": "처리 대상 CR_INPUT 행 상태를 GENERATING으로 변경한다."
+    },
+    {
+      "id": "build_llm_payload",
+      "type": "Code",
+      "purpose": "LLM 입력 계약에 맞는 JSON payload를 생성한다.",
+      "input": "valid_payloads",
+      "output": "llm_payload"
+    },
+    {
+      "id": "call_llm",
+      "type": "HTTP Request",
+      "purpose": "후보 LLM API를 호출한다.",
+      "input": "system_prompt + llm_payload",
+      "output": "raw_llm_response"
+    },
+    {
+      "id": "parse_llm_response",
+      "type": "Code",
+      "purpose": "LLM 응답을 JSON으로 파싱하고 출력 계약을 검증한다.",
+      "input": "raw_llm_response",
+      "output": "parsed_draft"
+    },
+    {
+      "id": "write_aop_draft",
+      "type": "Google Sheets Append",
+      "purpose": "AOP_DRAFT 시트에 과정 개요 및 차시별 학습내용 초안을 저장한다."
+    },
+    {
+      "id": "write_time_reason",
+      "type": "Google Sheets Append",
+      "purpose": "TIME_REASON_DRAFT 시트에 학습소요시간 산정사유를 저장한다."
+    },
+    {
+      "id": "write_practice_project",
+      "type": "Google Sheets Append",
+      "purpose": "PRACTICE_PROJECT_REVIEW 시트에 실습/프로젝트 후보를 저장한다."
+    },
+    {
+      "id": "write_run_log",
+      "type": "Google Sheets Append",
+      "purpose": "RUN_LOG 시트에 실행 결과와 오류를 기록한다."
+    },
+    {
+      "id": "notify_bo",
+      "type": "Slack or Gmail",
+      "purpose": "BO에게 초안 생성 완료 또는 실패를 알린다."
+    }
+  ],
+  "states": [
+    "PENDING",
+    "GENERATING",
+    "REVIEW_PENDING",
+    "REGENERATE_REQUESTED",
+    "APPROVED",
+    "ERROR"
+  ],
+  "guardrails": [
+    "APPROVED 상태의 행은 덮어쓰지 않는다.",
+    "JSON 파싱 실패 시 RUN_LOG에 raw response 일부와 오류 메시지를 남긴다.",
+    "필수 입력 필드가 없으면 LLM을 호출하지 않는다.",
+    "BO review_comment가 있으면 재생성 프롬프트에 포함한다."
+  ]
+}

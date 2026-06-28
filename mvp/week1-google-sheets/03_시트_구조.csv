@@ -1,0 +1,8 @@
+시트명,역할,주요 입력,주요 출력,상태값,비고
+CR_INPUT,"콘텐츠 정보 입력","과정명, 차시, 파트, 챕터, 클립명, 클립 시간","자동화 입력 데이터",PENDING,"모든 단계의 출발점"
+AOP_ANALYSIS,"1차 AOP 분석","CR_INPUT","과정 개요, 과정 목표, 학습 흐름, 차시 구성 요약",REVIEW_PENDING → APPROVED,"요청자의 '1차 AOP 분석'에 해당"
+PRACTICE_PROJECT_ANALYSIS,"2차 실습/프로젝트 분석","CR_INPUT + APPROVED AOP","실습 개수, 프로젝트 개수, 개요, 내용, 산출물",REVIEW_PENDING → APPROVED,"프로젝트 산출물은 별도 문서 연동 검토"
+INSTRUCTOR_MATCHING,"3차 교강사 리스트","과정 주제, 기술스택, 교강사 DB","교강사 후보, 매칭 사유",OPTIONAL,"요청자도 별도 플로우 가능하다고 언급"
+OPERATION_PLAN_OUTLINE,"4차 운영계획서 개요","APPROVED AOP + APPROVED 실습/프로젝트","세부항목별 운영계획서 아웃라인",REVIEW_PENDING → APPROVED,"최종 문서 생성 직전 단계"
+FINAL_OUTPUT,"최종 운영계획서 산출","APPROVED 운영계획서 개요","Docs/PDF 또는 최종 초안",DONE,"2차 MVP 또는 PoC 후 구현 가능"
+RUN_LOG,"실행 기록","각 자동화 실행 결과","성공/실패 로그, 오류 메시지",SUCCESS 또는 FAILED,"운영 안정성 확인용"

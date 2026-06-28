@@ -1,0 +1,109 @@
+{
+  "course_overview": {
+    "one_line_summary": "Cursor AI와 웹 개발 도구를 활용하여 서비스 기획 문서 작성부터 웹 서비스 제작 및 배포 흐름까지 학습하는 실습 중심 과정",
+    "course_purpose": "본 과정은 Cursor AI의 기본 개념과 사용 환경을 이해하고, PRD 및 요구사항 문서 작성 방법을 익힌 뒤, Firebase와 v0 등 웹 개발 도구를 활용하여 실제 서비스 제작 흐름을 경험하도록 구성되어 있다.",
+    "learning_flow": "초반에는 Cursor AI의 개념, 설치, 기본 사용법과 개발 전 문서 작성 방식을 학습한다. 이후 투두리스트와 랜딩페이지 제작 프로젝트를 통해 기획 문서 작성, 프로젝트 세팅, UI 구성, 데이터베이스 연결, 호스팅 등 서비스 구현에 필요한 절차를 단계적으로 익힌다.",
+    "expected_outcome": "학습자는 AI 기반 개발 환경을 활용하여 서비스 기획 문서를 작성하고, 간단한 웹 서비스 또는 랜딩페이지 제작 흐름을 이해하며, Firebase 등 외부 도구와 연동하는 기초 역량을 확보할 수 있다.",
+    "review_notes": [
+      "샘플은 CR 1~3차시만 기준으로 작성되었으므로 전체 과정 개요 확정 전 전체 CR 검토가 필요하다.",
+      "과정명에 포함된 '13가지 웹 서비스' 전체 범위는 샘플 입력에 모두 포함되지 않았다."
+    ]
+  },
+  "sessions": [
+    {
+      "session_no": "1",
+      "session_title_draft": "Cursor AI 입문 및 개발 전 문서 작성 기초",
+      "source_rows": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      "total_clip_duration": "1:05:33",
+      "learning_summary_draft": "본 차시는 Cursor AI의 개념과 필요성을 이해하고, 설치 및 기본 사용법을 익히는 데 중점을 둔다. 또한 웹 개발 전 준비 단계로 Node.js 설치 방법을 확인하고, PRD, Requirements 문서, Rules for AI 등 AI 기반 개발 과정에서 필요한 기획 및 요구사항 문서 작성 방식을 학습한다.",
+      "learning_objective_draft": "Cursor AI의 기본 사용 환경을 구축하고, AI 기반 웹 개발을 시작하기 전 필요한 문서 작성 체계와 개발 준비 절차를 설명할 수 있다.",
+      "time_reason_draft": "총 학습 소요 시간: 60분\n- 강의 영상 학습 및 복습: 60분\n- 자기주도 정리 및 개발 환경 점검: 검토 필요\n→ Cursor AI의 개념, 설치, 기본 사용법과 개발 전 문서 작성 방식을 학습하고, 학습자가 이후 프로젝트 차시에서 활용할 개발 준비 요소를 정리하는 시간으로 구성한다.\n→ 본 차시는 실습 키워드가 포함되어 있으나 실제 실습 과제 편성 여부는 CR만으로 확정하기 어려우므로 BO 검토가 필요하다.",
+      "reason_basis": "입력 CR 기준 총 영상 재생시간이 약 65분으로 목표 학습소요시간 60분을 초과한다. 훈련시간 기준 조정 또는 클립 구성 확인이 필요하다.",
+      "practice_project_candidates": [
+        {
+          "detected_type": "PRACTICE",
+          "detected_keyword": "실습",
+          "source_clip_names": [
+            "Ch 3. 개발전 기초 실습 - PRD",
+            "Ch 4. 개발전 기초 실습 - Requirements 문서 활용"
+          ],
+          "summary_draft": "PRD와 Requirements 문서를 활용하여 AI 기반 개발 전 필요한 기획 문서와 요구사항 문서의 작성 방식을 학습하는 실습성 차시로 볼 수 있다.",
+          "expected_output_draft": "PRD 또는 Requirements 문서 초안",
+          "needs_review": true
+        }
+      ],
+      "needs_review": true,
+      "review_notes": [
+        "총 영상 재생시간이 목표 학습소요시간 60분보다 길어 훈련시간 산정 기준 확인이 필요하다.",
+        "실습 편성 여부가 명시 필드로 제공되지 않아 BO 확인이 필요하다."
+      ]
+    },
+    {
+      "session_no": "2",
+      "session_title_draft": "Firebase 기반 투두리스트 웹사이트 제작 프로젝트",
+      "source_rows": [12, 13, 14, 15],
+      "total_clip_duration": "1:05:03",
+      "learning_summary_draft": "본 차시는 투두리스트 웹사이트 제작 프로젝트를 중심으로 Firebase의 역할을 이해하고, 프로젝트 세팅, 웹사이트 구현, Firebase 데이터베이스 설정 및 연결 과정을 학습한다. 학습자는 서비스 제작 전 기획 문서와 요구사항을 바탕으로 프로젝트를 구성하고, 데이터 저장 기능이 포함된 기초 웹 서비스를 구현하는 흐름을 경험한다.",
+      "learning_objective_draft": "Firebase를 활용한 투두리스트 웹사이트 제작 절차를 이해하고, 프로젝트 세팅부터 데이터베이스 연결까지의 기본 구현 흐름을 설명할 수 있다.",
+      "time_reason_draft": "총 학습 소요 시간: 60분\n- 강의 영상 학습 및 복습: 60분\n- 프로젝트 구현 흐름 정리: 검토 필요\n→ Firebase 기반 투두리스트 제작 과정을 학습하고, 프로젝트 세팅, 웹사이트 구현, 데이터베이스 연결 절차를 실제 서비스 제작 흐름에 맞게 이해하는 시간으로 구성한다.\n→ 프로젝트성 차시이므로 영상 시청 외 구현 및 산출물 제출 시간이 포함되는지 BO 검토가 필요하다.",
+      "reason_basis": "입력 CR 기준 총 영상 재생시간이 약 65분으로 목표 학습소요시간 60분을 초과한다. 프로젝트성 활동이 포함되므로 훈련시간 산정 방식 확인이 필요하다.",
+      "practice_project_candidates": [
+        {
+          "detected_type": "PROJECT",
+          "detected_keyword": "프로젝트",
+          "source_clip_names": [
+            "Part 2. 프로젝트 1 - 투두리스트",
+            "02. 투두리스트 프로젝트 세팅하기 (PRD, Require)",
+            "03. 본격적으로 투두리스트 웹사이트 만들기"
+          ],
+          "summary_draft": "Firebase를 활용하여 투두리스트 웹사이트를 제작하는 프로젝트형 차시이다. 프로젝트 세팅, 웹사이트 구현, 데이터베이스 연결을 통해 서비스 제작 흐름을 경험한다.",
+          "expected_output_draft": "Firebase 데이터베이스가 연결된 투두리스트 웹사이트",
+          "needs_review": true
+        }
+      ],
+      "needs_review": true,
+      "review_notes": [
+        "프로젝트 산출물과 제출 방식은 CR에 명확히 없으므로 별도 확인이 필요하다."
+      ]
+    },
+    {
+      "session_no": "3",
+      "session_title_draft": "v0와 Cursor를 활용한 랜딩페이지 제작",
+      "source_rows": [16, 17, 18, 19, 20, 21],
+      "total_clip_duration": "0:54:43",
+      "learning_summary_draft": "본 차시는 랜딩페이지의 개념과 v0의 역할을 이해한 뒤, v0와 Cursor를 활용하여 랜딩페이지의 기초 디자인을 구성하고 개선하는 방법을 학습한다. 이후 tally 폼을 추가하여 고객 정보를 수집하고, Firebase를 활용한 호스팅 절차를 확인함으로써 랜딩페이지 제작부터 배포까지의 기본 흐름을 익힌다.",
+      "learning_objective_draft": "v0와 Cursor를 활용하여 랜딩페이지를 설계 및 개선하고, 폼 연동과 호스팅을 포함한 기초 배포 흐름을 설명할 수 있다.",
+      "time_reason_draft": "총 학습 소요 시간: 60분\n- 강의 영상 학습 및 복습: 55분\n- 자기주도 정리 및 제작 흐름 점검: 5분\n→ 랜딩페이지의 개념, v0와 Cursor를 활용한 디자인 구성, 고객 정보 수집 폼 추가, Firebase 호스팅 절차를 학습하는 시간으로 구성한다.\n→ 학습자는 시청 후 랜딩페이지 제작 단계와 각 도구의 역할을 정리하며 후속 프로젝트 수행에 필요한 기초 흐름을 내재화한다.",
+      "reason_basis": "입력 CR 기준 총 영상 재생시간은 약 55분이며, 목표 학습소요시간 60분과의 차이는 복습 및 제작 흐름 정리 시간으로 산정할 수 있다.",
+      "practice_project_candidates": [
+        {
+          "detected_type": "PROJECT",
+          "detected_keyword": "프로젝트",
+          "source_clip_names": [
+            "Part 3. 프로젝트 2 - v0 + Cursor로 만드는 매력적인 랜딩페이지 제작",
+            "Ch 2. 랜딩페이지 제작"
+          ],
+          "summary_draft": "v0와 Cursor를 활용하여 랜딩페이지를 제작하고, tally 폼 및 Firebase 호스팅을 통해 고객 정보 수집과 배포 흐름을 경험하는 프로젝트형 차시이다.",
+          "expected_output_draft": "고객 정보 수집 폼이 포함된 랜딩페이지",
+          "needs_review": true
+        }
+      ],
+      "needs_review": true,
+      "review_notes": [
+        "tally 폼과 Firebase 호스팅이 실제 실습 산출물에 포함되는지 BO 확인이 필요하다."
+      ]
+    }
+  ],
+  "quality_checks": {
+    "missing_required_fields": [],
+    "possible_over_generation": [
+      "expected_output_draft는 클립명 기반 추정이므로 BO 검토 필요"
+    ],
+    "time_reason_warnings": [
+      "1차시와 2차시는 총 영상 재생시간이 목표 학습소요시간 60분보다 길어 산정 기준 확인 필요"
+    ],
+    "practice_project_warnings": [
+      "실습/프로젝트 편성 여부 필드가 없으므로 키워드 기반 후보 탐지 결과만 제공"
+    ]
+  }
+}

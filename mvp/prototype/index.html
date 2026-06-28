@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plan-B MVP</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fb;
+        --panel: #ffffff;
+        --line: #d9deea;
+        --text: #1d2533;
+        --muted: #667085;
+        --brand: #1769aa;
+        --brand-weak: #e7f1fa;
+        --ok: #16794f;
+        --warn: #a15c08;
+        --warn-bg: #fff4df;
+        --review: #5f56b3;
+        --review-bg: #eeecff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--line);
+        background: #ffffff;
+        padding: 20px 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 22px;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        background: var(--brand);
+        color: #fff;
+        font-weight: 800;
+      }
+
+      .brand-text strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .brand-text span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+
+      .meta {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 18px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcff;
+      }
+
+      .course-switcher {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .course-switcher label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .course-switcher select {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--text);
+        padding: 7px 9px;
+      }
+
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .meta-row strong {
+        color: var(--text);
+        font-weight: 650;
+        text-align: right;
+      }
+
+      .nav {
+        display: grid;
+        gap: 6px;
+      }
+
+      .nav button {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+        padding: 9px 10px;
+        cursor: pointer;
+      }
+
+      .nav button:hover {
+        background: #f1f4f9;
+      }
+
+      .nav button[aria-selected="true"] {
+        border-color: #b9d5ec;
+        background: var(--brand-weak);
+        color: #0d4d82;
+        font-weight: 700;
+      }
+
+      .main {
+        min-width: 0;
+        padding: 22px 28px 36px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--text);
+        padding: 8px 12px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .btn.primary {
+        border-color: var(--brand);
+        background: var(--brand);
+        color: #fff;
+      }
+
+      .status-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .metric {
+        min-height: 84px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 14px;
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 22px;
+      }
+
+      .section {
+        display: none;
+      }
+
+      .section.active {
+        display: block;
+      }
+
+      .flow-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .flow-step {
+        min-height: 150px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 14px;
+      }
+
+      .flow-step.current {
+        border-color: #b9d5ec;
+        background: var(--brand-weak);
+      }
+
+      .flow-step h2 {
+        margin: 8px 0;
+        font-size: 15px;
+      }
+
+      .flow-step p {
+        margin: 0;
+        color: #344054;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .coverage {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .overview {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        gap: 12px;
+      }
+
+      .panel,
+      .session {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .panel {
+        padding: 16px;
+      }
+
+      .panel h2,
+      .session h2 {
+        margin: 0 0 10px;
+        font-size: 16px;
+        letter-spacing: 0;
+      }
+
+      .panel p,
+      .session p {
+        margin: 0;
+        color: #344054;
+        line-height: 1.65;
+        font-size: 14px;
+      }
+
+      .session {
+        overflow: hidden;
+      }
+
+      .session-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        background: #fbfcff;
+      }
+
+      .session-title {
+        min-width: 0;
+      }
+
+      .session-title h2 {
+        margin-bottom: 4px;
+      }
+
+      .session-title span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        border-radius: 999px;
+        padding: 3px 9px;
+        background: var(--review-bg);
+        color: var(--review);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .badge.warn {
+        background: var(--warn-bg);
+        color: var(--warn);
+      }
+
+      .badge.ok {
+        background: #e8f6ef;
+        color: var(--ok);
+      }
+
+      .session-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.75fr);
+        gap: 0;
+      }
+
+      .cell {
+        padding: 16px;
+        border-right: 1px solid var(--line);
+      }
+
+      .cell:last-child {
+        border-right: 0;
+      }
+
+      .field-label {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 150px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        color: var(--text);
+        background: #fff;
+        line-height: 1.55;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px;
+        vertical-align: top;
+        text-align: left;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      th {
+        color: var(--muted);
+        background: #fbfcff;
+        font-size: 12px;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .empty-note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 920px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .main {
+          padding: 18px;
+        }
+
+        .topbar,
+        .overview,
+        .session-body {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          display: grid;
+        }
+
+        .actions {
+          justify-content: flex-start;
+        }
+
+        .status-strip {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .flow-grid,
+        .coverage {
+          grid-template-columns: 1fr;
+        }
+
+        .cell {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .cell:last-child {
+          border-bottom: 0;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .status-strip,
+        .nav {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">P</div>
+          <div class="brand-text">
+            <strong>Plan-B</strong>
+            <span>1차 MVP 검토 화면</span>
+          </div>
+        </div>
+
+        <div class="meta">
+          <div class="course-switcher">
+            <label for="courseSelect">교육 상품 / 과정</label>
+            <select id="courseSelect" aria-label="교육 상품 및 과정 선택">
+              <option>Cursor AI 마스터 / KDC-SAMPLE-001</option>
+              <option disabled>AI 엔지니어 입문 / 준비 중</option>
+              <option disabled>추가 KDC 과정 / 준비 중</option>
+            </select>
+          </div>
+          <div class="meta-row"><span>상품 ID</span><strong>PRODUCT-SAMPLE</strong></div>
+          <div class="meta-row"><span>과정 ID</span><strong>KDC-SAMPLE-001</strong></div>
+          <div class="meta-row"><span>상태</span><strong>REVIEW_PENDING</strong></div>
+          <div class="meta-row"><span>입력</span><strong>CR 21행</strong></div>
+          <div class="meta-row"><span>차시</span><strong>3개</strong></div>
+          <div class="meta-row"><span>기준 시간</span><strong>60분</strong></div>
+        </div>
+
+        <nav class="nav" aria-label="검토 탭">
+          <button type="button" aria-selected="true" data-tab="overview">과정 개요</button>
+          <button type="button" aria-selected="false" data-tab="sessions">차시별 초안</button>
+          <button type="button" aria-selected="false" data-tab="time">산정사유</button>
+          <button type="button" aria-selected="false" data-tab="projects">실습/프로젝트</button>
+          <button type="button" aria-selected="false" data-tab="flow">요청 플로우</button>
+          <button type="button" aria-selected="false" data-tab="checks">제출 체크</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <h1>지금 당장 나만의 서비스 런칭! Cursor AI 마스터</h1>
+            <p class="subtitle">CR 샘플 1~3차시를 기반으로 생성된 운영계획서 초안 검토 화면입니다.</p>
+          </div>
+          <div class="actions">
+            <button class="btn" type="button">재생성 요청</button>
+            <button class="btn primary" type="button">승인</button>
+          </div>
+        </div>
+
+        <div class="status-strip" aria-label="검토 지표">
+          <div class="metric"><span>초안 차시</span><strong>3</strong></div>
+          <div class="metric"><span>검토 필요</span><strong>3</strong></div>
+          <div class="metric"><span>프로젝트 후보</span><strong>2</strong></div>
+          <div class="metric"><span>현재 단계</span><strong>2/4</strong></div>
+        </div>
+
+        <section class="section active" id="overview">
+          <div class="overview">
+            <div class="panel">
+              <h2>과정 개요 초안</h2>
+              <p>
+                Cursor AI와 웹 개발 도구를 활용하여 서비스 기획 문서 작성부터 웹 서비스 제작 및 배포 흐름까지
+                학습하는 실습 중심 과정입니다. 학습자는 Cursor AI의 기본 개념과 사용 환경을 이해하고, PRD 및
+                요구사항 문서 작성 방법을 익힌 뒤 Firebase와 v0 등 웹 개발 도구를 활용하여 실제 서비스 제작
+                흐름을 경험합니다.
+              </p>
+            </div>
+            <div class="panel">
+              <h2>BO 검토 메모</h2>
+              <textarea aria-label="BO 검토 메모" placeholder="수정 의견을 입력하세요."></textarea>
+              <div class="toolbar">
+                <button class="btn" type="button">저장</button>
+                <button class="btn" type="button">재생성 의견으로 사용</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="sessions">
+          <div class="grid" id="sessionList"></div>
+        </section>
+
+        <section class="section" id="time">
+          <div class="grid" id="timeList"></div>
+        </section>
+
+        <section class="section" id="projects">
+          <table>
+            <thead>
+              <tr>
+                <th>차시</th>
+                <th>유형</th>
+                <th>근거</th>
+                <th>초안</th>
+                <th>예상 산출물</th>
+                <th>BO 판단</th>
+              </tr>
+            </thead>
+            <tbody id="projectRows"></tbody>
+          </table>
+        </section>
+
+        <section class="section" id="flow">
+          <div class="flow-grid">
+            <article class="flow-step">
+              <span class="badge ok">완료</span>
+              <h2>1단계. CR 분석</h2>
+              <p>CR 입력값을 기준으로 과정 개요, 차시별 학습내용, 산정사유, 실습/프로젝트 후보를 생성합니다.</p>
+            </article>
+            <article class="flow-step current">
+              <span class="badge">진행 중</span>
+              <h2>2단계. BO 1차 워싱</h2>
+              <p>BO가 초안을 검토하고 셀 단위로 수정합니다. 승인된 항목만 다음 단계 입력으로 고정됩니다.</p>
+            </article>
+            <article class="flow-step">
+              <span class="badge warn">후속</span>
+              <h2>3단계. 최종본 작성</h2>
+              <p>APPROVED 데이터만 Google Docs 템플릿에 삽입해 운영계획서 최종 초안을 생성합니다.</p>
+            </article>
+            <article class="flow-step">
+              <span class="badge warn">후속</span>
+              <h2>4단계. 최종 피드백</h2>
+              <p>BO가 Docs/PDF 최종본을 확인하고 DONE 또는 재작성 요청으로 상태를 확정합니다.</p>
+            </article>
+          </div>
+
+          <div class="coverage">
+            <div class="panel">
+              <h2>B2C 요청 반영 현황</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>요청 항목</th>
+                    <th>상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>CR 기반 아웃라인 및 플로우 작성</td><td><span class="badge ok">반영</span></td></tr>
+                  <tr><td>BO 1차 수정 및 승인</td><td><span class="badge ok">반영</span></td></tr>
+                  <tr><td>실습/프로젝트 개수 및 개요 분리</td><td><span class="badge">MVP 반영</span></td></tr>
+                  <tr><td>교강사 리스트업</td><td><span class="badge warn">별도 플로우</span></td></tr>
+                  <tr><td>최종 운영계획서 Docs/PDF 생성</td><td><span class="badge warn">2차 MVP</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="panel">
+              <h2>기획 보완 포인트</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>보완 항목</th>
+                    <th>판단</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>원본 CR과 AI 초안 비교</td><td>필수</td></tr>
+                  <tr><td>승인 기준과 변경 이력</td><td>필수</td></tr>
+                  <tr><td>소요시간 초과/미달 경고</td><td>필수</td></tr>
+                  <tr><td>최종 문서 템플릿 필드 매핑</td><td>2차 설계</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="checks">
+          <div class="grid">
+            <div class="panel">
+              <h2>제출 전 체크리스트</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>항목</th>
+                    <th>결과</th>
+                    <th>메모</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>과정 개요 초안</td><td><span class="badge ok">생성됨</span></td><td>BO 문체 검토 필요</td></tr>
+                  <tr><td>차시별 학습내용</td><td><span class="badge ok">생성됨</span></td><td>3개 차시 샘플 기준</td></tr>
+                  <tr><td>학습소요시간 산정사유</td><td><span class="badge warn">검토 필요</span></td><td>1~2차시 재생시간이 60분 초과</td></tr>
+                  <tr><td>실습/프로젝트 후보</td><td><span class="badge">검토 대기</span></td><td>예상 산출물은 BO 확정 필요</td></tr>
+                  <tr><td>교강사 리스트</td><td><span class="badge warn">범위 외</span></td><td>담당자 요청상 별도 진행 가능</td></tr>
+                  <tr><td>최종 운영계획서 Docs/PDF</td><td><span class="badge warn">후속</span></td><td>APPROVED 데이터 확보 후 생성</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const sessions = [
+        {
+          no: "1",
+          title: "Cursor AI 입문 및 개발 전 문서 작성 기초",
+          duration: "1:05:33",
+          summary:
+            "본 차시는 Cursor AI의 개념과 필요성을 이해하고, 설치 및 기본 사용법을 익히는 데 중점을 둔다. 또한 웹 개발 전 준비 단계로 Node.js 설치 방법을 확인하고, PRD, Requirements 문서, Rules for AI 등 AI 기반 개발 과정에서 필요한 기획 및 요구사항 문서 작성 방식을 학습한다.",
+          objective:
+            "Cursor AI의 기본 사용 환경을 구축하고, AI 기반 웹 개발을 시작하기 전 필요한 문서 작성 체계와 개발 준비 절차를 설명할 수 있다.",
+          time:
+            "총 학습 소요 시간: 60분\n- 강의 영상 학습 및 복습: 60분\n- 자기주도 정리 및 개발 환경 점검: 검토 필요\n→ Cursor AI의 개념, 설치, 기본 사용법과 개발 전 문서 작성 방식을 학습하고, 이후 프로젝트 차시에서 활용할 개발 준비 요소를 정리하는 시간으로 구성한다.",
+          warning: "총 영상 재생시간이 60분보다 길어 산정 기준 확인 필요",
+        },
+        {
+          no: "2",
+          title: "Firebase 기반 투두리스트 웹사이트 제작 프로젝트",
+          duration: "1:05:03",
+          summary:
+            "본 차시는 투두리스트 웹사이트 제작 프로젝트를 중심으로 Firebase의 역할을 이해하고, 프로젝트 세팅, 웹사이트 구현, Firebase 데이터베이스 설정 및 연결 과정을 학습한다.",
+          objective:
+            "Firebase를 활용한 투두리스트 웹사이트 제작 절차를 이해하고, 프로젝트 세팅부터 데이터베이스 연결까지의 기본 구현 흐름을 설명할 수 있다.",
+          time:
+            "총 학습 소요 시간: 60분\n- 강의 영상 학습 및 복습: 60분\n- 프로젝트 구현 흐름 정리: 검토 필요\n→ Firebase 기반 투두리스트 제작 과정을 학습하고, 프로젝트 세팅, 웹사이트 구현, 데이터베이스 연결 절차를 실제 서비스 제작 흐름에 맞게 이해하는 시간으로 구성한다.",
+          warning: "프로젝트 산출물과 제출 방식 확인 필요",
+        },
+        {
+          no: "3",
+          title: "v0와 Cursor를 활용한 랜딩페이지 제작",
+          duration: "0:54:43",
+          summary:
+            "본 차시는 랜딩페이지의 개념과 v0의 역할을 이해한 뒤, v0와 Cursor를 활용하여 랜딩페이지의 기초 디자인을 구성하고 개선하는 방법을 학습한다.",
+          objective:
+            "v0와 Cursor를 활용하여 랜딩페이지를 설계 및 개선하고, 폼 연동과 호스팅을 포함한 기초 배포 흐름을 설명할 수 있다.",
+          time:
+            "총 학습 소요 시간: 60분\n- 강의 영상 학습 및 복습: 55분\n- 자기주도 정리 및 제작 흐름 점검: 5분\n→ 랜딩페이지의 개념, v0와 Cursor를 활용한 디자인 구성, 고객 정보 수집 폼 추가, Firebase 호스팅 절차를 학습하는 시간으로 구성한다.",
+          warning: "",
+        },
+      ];
+
+      const projects = [
+        {
+          no: "1",
+          type: "PRACTICE",
+          source: "개발전 기초 실습 - PRD | Requirements 문서 활용",
+          summary: "PRD와 Requirements 문서 작성 방식을 학습하는 실습성 차시로 볼 수 있다.",
+          output: "PRD 또는 Requirements 문서 초안",
+        },
+        {
+          no: "2",
+          type: "PROJECT",
+          source: "프로젝트 1 - 투두리스트 | 웹사이트 만들기",
+          summary: "Firebase를 활용하여 투두리스트 웹사이트를 제작하는 프로젝트형 차시이다.",
+          output: "Firebase 데이터베이스가 연결된 투두리스트 웹사이트",
+        },
+        {
+          no: "3",
+          type: "PROJECT",
+          source: "프로젝트 2 - 랜딩페이지 제작",
+          summary: "v0와 Cursor를 활용하여 랜딩페이지를 제작하고 폼 및 호스팅 흐름을 경험한다.",
+          output: "고객 정보 수집 폼이 포함된 랜딩페이지",
+        },
+      ];
+
+      const sessionList = document.querySelector("#sessionList");
+      const timeList = document.querySelector("#timeList");
+      const projectRows = document.querySelector("#projectRows");
+
+      function renderSessions() {
+        sessionList.innerHTML = sessions
+          .map(
+            (session) => `
+              <article class="session">
+                <div class="session-head">
+                  <div class="session-title">
+                    <h2>${session.no}차시. ${session.title}</h2>
+                    <span>총 재생시간 ${session.duration}</span>
+                  </div>
+                  <span class="badge">REVIEW_PENDING</span>
+                </div>
+                <div class="session-body">
+                  <div class="cell">
+                    <span class="field-label">학습내용 초안</span>
+                    <p>${session.summary}</p>
+                  </div>
+                  <div class="cell">
+                    <span class="field-label">학습목표 초안</span>
+                    <textarea aria-label="${session.no}차시 학습목표">${session.objective}</textarea>
+                    <div class="toolbar">
+                      <button class="btn" type="button">수정 저장</button>
+                      <button class="btn primary" type="button">승인</button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function renderTime() {
+        timeList.innerHTML = sessions
+          .map(
+            (session) => `
+              <article class="session">
+                <div class="session-head">
+                  <div class="session-title">
+                    <h2>${session.no}차시. ${session.title}</h2>
+                    <span>총 재생시간 ${session.duration}</span>
+                  </div>
+                  <span class="badge ${session.warning ? "warn" : "ok"}">${session.warning ? "검토 필요" : "기준 적합"}</span>
+                </div>
+                <div class="cell">
+                  <span class="field-label">학습소요시간 산정사유</span>
+                  <textarea aria-label="${session.no}차시 산정사유">${session.time}</textarea>
+                  <div class="toolbar">
+                    <button class="btn" type="button">수정 저장</button>
+                    <button class="btn" type="button">재생성 요청</button>
+                    <button class="btn primary" type="button">승인</button>
+                  </div>
+                  ${session.warning ? `<p class="empty-note">${session.warning}</p>` : ""}
+                </div>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function renderProjects() {
+        projectRows.innerHTML = projects
+          .map(
+            (item) => `
+              <tr>
+                <td>${item.no}</td>
+                <td><span class="badge">${item.type}</span></td>
+                <td>${item.source}</td>
+                <td>${item.summary}</td>
+                <td>${item.output}</td>
+                <td>
+                  <select aria-label="${item.no}차시 BO 판단">
+                    <option>검토 대기</option>
+                    <option>사용</option>
+                    <option>수정 후 사용</option>
+                    <option>제외</option>
+                  </select>
+                </td>
+              </tr>
+            `,
+          )
+          .join("");
+      }
+
+      function bindTabs() {
+        document.querySelectorAll("[data-tab]").forEach((button) => {
+          button.addEventListener("click", () => {
+            document.querySelectorAll("[data-tab]").forEach((tab) => tab.setAttribute("aria-selected", "false"));
+            document.querySelectorAll(".section").forEach((section) => section.classList.remove("active"));
+            button.setAttribute("aria-selected", "true");
+            document.querySelector(`#${button.dataset.tab}`).classList.add("active");
+          });
+        });
+      }
+
+      renderSessions();
+      renderTime();
+      renderProjects();
+      bindTabs();
+    </script>
+  </body>
+</html>
