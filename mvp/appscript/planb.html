@@ -1,0 +1,791 @@
+<html lang="ko"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plan-B</title>
+  <meta name="description" content="KDC 운영계획서 자동화">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .spinner { width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#7d93f6;border-radius:50%;animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .toast { position:fixed;bottom:24px;right:24px;min-width:260px;border-radius:12px;padding:14px 18px;font-size:13px;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s ease;pointer-events:none; }
+    .toast.show { opacity:1;transform:translateY(0); }
+    textarea { resize:vertical; }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+    select { background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:4px 8px;font-size:12px; }
+  </style>
+</head>
+<body class="bg-[#eef3f4] text-[#111827] h-screen overflow-hidden">
+
+<!-- ── 로그인 화면 ── -->
+<div id="loginScreen" class="fixed inset-0 bg-[#eef3f4] z-[999] flex items-center justify-center p-5">
+  <div class="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl">
+    <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-[#7d93f6] mb-1 text-center">Plan-B</p>
+    <h1 class="text-xl font-bold text-center mb-1">로그인</h1>
+    <p class="text-xs text-[#667085] text-center mb-6">허가된 회사 계정으로만 접근할 수 있습니다.</p>
+
+    <!-- STEP 1: 이메일 입력 -->
+    <div id="loginStepEmail">
+      <label class="block text-xs font-bold text-[#344054] mb-1.5">이메일</label>
+      <input id="loginEmail" type="email" placeholder="admin@day1company.co.kr" autocomplete="username" class="w-full rounded-xl border border-[#e5e9f0] px-4 py-3 text-sm focus:outline-none focus:border-[#7d93f6] mb-2">
+      <p id="loginError" class="hidden text-xs text-red-600 mb-3"></p>
+      <button onclick="handleSendCode()" id="sendCodeBtn" class="w-full rounded-xl bg-[#7d93f6] py-3 text-sm font-bold text-white hover:bg-[#6070d4] mt-2">
+        인증코드 받기
+      </button>
+    </div>
+
+    <!-- STEP 2: 인증코드 입력 -->
+    <div id="loginStepCode" class="hidden">
+      <p class="text-xs text-[#667085] mb-4"><strong id="codeSentEmail" class="text-[#111827]"></strong>로 인증코드를 보냈습니다. 메일함(스팸함 포함)을 확인해주세요.</p>
+      <label class="block text-xs font-bold text-[#344054] mb-1.5">인증코드 (6자리)</label>
+      <input id="loginCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" class="w-full rounded-xl border border-[#e5e9f0] px-4 py-3 text-sm tracking-[0.3em] text-center focus:outline-none focus:border-[#7d93f6] mb-2">
+      <p id="codeError" class="hidden text-xs text-red-600 mb-3"></p>
+      <button onclick="handleVerifyCode()" id="verifyCodeBtn" class="w-full rounded-xl bg-[#7d93f6] py-3 text-sm font-bold text-white hover:bg-[#6070d4] mt-2">
+        로그인
+      </button>
+      <div class="flex items-center justify-between mt-4">
+        <button onclick="handleBackToEmail()" class="text-[11px] text-[#98a2b3] hover:text-[#465568]">← 이메일 다시 입력</button>
+        <button onclick="handleSendCode()" id="resendBtn" class="text-[11px] text-[#7d93f6] hover:text-[#6070d4] font-bold">인증코드 재전송</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const codeInput = document.getElementById('loginCode');
+    if (codeInput) codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleVerifyCode(); });
+    const emailInput = document.getElementById('loginEmail');
+    if (emailInput) {
+      emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSendCode(); });
+      emailInput.addEventListener('input', () => clearEmailError());
+    }
+  });
+</script>
+
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay" class="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center gap-4 hidden">
+  <div class="spinner"></div>
+  <p id="loadingText" class="text-sm text-[#667085]">AI가 CR 데이터를 읽고 운영계획서 초안을 생성 중입니다...</p>
+</div>
+
+<!-- 토스트 -->
+<div id="toast" class="toast bg-[#111827] text-white">오류: 서버 오류 404</div>
+
+<div id="appRoot" class="hidden grid h-screen w-screen overflow-hidden lg:grid-cols-[220px_1fr]">
+
+  <!-- ── 사이드바 ── -->
+  <aside class="flex min-h-0 flex-col justify-between bg-white px-5 py-6 overflow-y-auto">
+    <div>
+      <!-- 사용자 -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-3 min-w-0">
+          <div id="userAvatar" class="grid h-11 w-11 place-items-center rounded-full bg-[#e9eef5] text-sm font-bold text-[#667085] shrink-0">BO</div>
+          <div class="min-w-0">
+            <p id="userName" class="text-sm font-bold truncate">-</p>
+            <p id="userEmail" class="mt-0.5 text-xs text-[#8a94a6] truncate">-</p>
+          </div>
+        </div>
+        <button onclick="handleLogout()" title="로그아웃" class="shrink-0 rounded-lg px-2 py-1.5 text-xs text-[#98a2b3] hover:bg-[#f3f6fb] hover:text-[#465568]">⏻</button>
+      </div>
+
+      <!-- 네비게이션 -->
+      <nav class="mt-8 grid gap-2 text-sm">
+        <button onclick="switchView('projects')" id="nav-projects" class="nav-btn flex items-center gap-3 rounded-lg px-4 py-3 text-left font-semibold   text-[#465568] hover:bg-[#f3f6fb] bg-[#7d93f6] text-white shadow-[0_12px_28px_rgba(125,147,246,0.28)]">
+          <span class="grid h-5 w-5 place-items-center rounded-md text-[11px] bg-white/20">1</span>
+          <span><span class="block">Projects</span><span class="block text-[10px] text-white/70">CR history</span></span>
+        </button>
+        <button onclick="switchView('review')" id="nav-review" class="nav-btn flex items-center gap-3 rounded-lg px-4 py-3 text-left font-semibold  text-[#465568] hover:bg-[#f3f6fb]  text-[#465568] hover:bg-[#f3f6fb]">
+          <span class="grid h-5 w-5 place-items-center rounded-md text-[11px] bg-[#eef2f7]">2</span>
+          <span><span class="block">Review</span><span class="block text-[10px] text-[#98a2b3]">AI chat</span></span>
+        </button>
+        <button onclick="switchView('plan')" id="nav-plan" class="nav-btn flex items-center gap-3 rounded-lg px-4 py-3 text-left font-semibold text-[#465568] hover:bg-[#f3f6fb] text-[#465568] hover:bg-[#f3f6fb] text-[#465568] hover:bg-[#f3f6fb]">
+          <span class="grid h-5 w-5 place-items-center rounded-md text-[11px] bg-[#eef2f7]">3</span>
+          <span><span class="block">Plan Items</span><span class="block text-[10px] text-[#98a2b3]">Approve values</span></span>
+        </button>
+        <button onclick="switchView('export')" id="nav-export" class="nav-btn flex items-center gap-3 rounded-lg px-4 py-3 text-left font-semibold text-[#465568] hover:bg-[#f3f6fb] text-[#465568] hover:bg-[#f3f6fb] text-[#465568] hover:bg-[#f3f6fb]">
+          <span class="grid h-5 w-5 place-items-center rounded-md text-[11px] bg-[#eef2f7]">4</span>
+          <span><span class="block">Export</span><span class="block text-[10px] text-[#98a2b3]">Docs/PDF</span></span>
+        </button>
+      </nav>
+
+      <!-- 현재 작업 중인 CR 표시 -->
+      <div id="activeCrInfo" class="hidden mt-6 rounded-xl bg-[#f0f3ff] border border-[#c7d0fa] p-3 text-xs">
+        <p class="font-bold text-[#5367d8] text-[11px] uppercase tracking-wide">현재 작업</p>
+        <p id="activeCrName" class="mt-1 font-bold text-[#111827] truncate">-</p>
+        <p id="activeCrStatus" class="mt-1 text-[#667085]">-</p>
+      </div>
+    </div>
+
+    <div class="rounded-2xl bg-[#f5f7fb] p-4 text-sm">
+      <p class="font-bold">Plan-B Console</p>
+      <p class="mt-2 leading-5 text-xs text-[#667085]">BO review workspace</p>
+    </div>
+  </aside>
+
+  <!-- ── 메인 ── -->
+  <section class="grid min-h-0 grid-rows-[78px_1fr] p-5 overflow-hidden">
+
+    <!-- 헤더 -->
+    <header class="flex min-w-0 items-center justify-between gap-5">
+      <div class="min-w-0">
+        <h1 id="mainTitle" class="truncate text-2xl font-bold tracking-normal">Plan-B</h1>
+        <p id="mainSubtitle" class="mt-1 truncate text-sm text-[#6b7788]">기존 CR 작업을 선택하거나 새 CR을 업로드하세요.</p>
+      </div>
+      <div class="flex shrink-0 items-center gap-3">
+        <!-- AppScript 설정 버튼 -->
+        <button onclick="toggleSettings()" class="rounded-2xl bg-white px-4 py-3 text-sm text-[#8a94a6] shadow-sm hover:bg-[#f3f6fb]">⚙️ 설정</button>
+      </div>
+    </header>
+
+    <!-- 설정 패널 (숨김) -->
+    <div id="settingsPanel" class="hidden absolute top-[88px] right-5 z-40 w-[420px] rounded-2xl bg-white shadow-xl border border-[#e5e9f0] p-5">
+      <p class="font-bold text-sm mb-3">AppScript URL 설정</p>
+      <p class="text-xs text-[#667085] mb-3">AppScript 웹 앱 배포 후 발급된 URL을 입력하세요. 브라우저에 저장됩니다.</p>
+      <div class="flex gap-2">
+        <input id="scriptUrlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 rounded-xl border border-[#e5e9f0] px-3 py-2 text-sm focus:outline-none focus:border-[#7d93f6]">
+        <button onclick="saveScriptUrl()" class="rounded-xl bg-[#111827] px-4 py-2 text-sm font-bold text-white">저장</button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         뷰 1: Projects (CR 목록 + 새 CR 업로드)
+    ════════════════════════════════════════ -->
+    <div id="view-projects" class="tab-content min-h-0 overflow-hidden active">
+      <div class="grid h-full min-h-0 grid-cols-[1fr_340px] gap-5">
+
+        <!-- 왼쪽: CR 목록 -->
+        <div class="rounded-2xl bg-white p-5 shadow-sm overflow-y-auto">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-[#7d93f6]">Projects</p>
+              <h2 class="mt-1 text-xl font-bold">기존 CR 작업 목록</h2>
+              <p class="mt-1 text-sm text-[#667085]">이전에 업로드한 CR을 선택하면 작업 상태를 이어서 확인합니다.</p>
+            </div>
+            <button onclick="showUploadModal()" class="shrink-0 rounded-xl bg-[#111827] px-4 py-3 text-sm font-bold text-white hover:bg-[#374151]">
+              새 CR 업로드
+            </button>
+          </div>
+
+          <!-- CR 목록 -->
+          <div id="crList" class="mt-5 grid gap-3">
+            <button onclick="openCR('AI 기반 마케팅 콘텐츠 전략', 'IN_PROGRESS', '2/5')" class="grid grid-cols-[1fr_150px_120px_90px] items-center gap-4 rounded-2xl border p-4 text-left transition border-[#edf1f5] bg-[#f8fafc] hover:border-[#7d93f6]">
+              <div class="min-w-0"><p class="truncate text-base font-bold">AI 기반 마케팅 콘텐츠 전략</p><p class="mt-1 truncate text-xs text-[#667085]">CR_AI_Marketing.xlsx</p></div>
+              <div><p class="text-xs text-[#98a2b3]">Owner</p><p class="mt-1 text-sm font-bold">정유림</p></div>
+              <div><p class="text-xs text-[#98a2b3]">Status</p><span class="mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-bold bg-[#e7f1fa] text-[#1769aa]">IN_PROGRESS</span></div>
+              <div><p class="text-xs text-[#98a2b3]">Approved</p><p class="mt-1 text-sm font-bold">2/5</p></div>
+            </button>
+            <button onclick="openCR('AICE 실무 입문 과정', 'REVIEW_PENDING', '1/5')" class="grid grid-cols-[1fr_150px_120px_90px] items-center gap-4 rounded-2xl border p-4 text-left transition border-[#edf1f5] bg-[#f8fafc] hover:border-[#7d93f6]">
+              <div class="min-w-0"><p class="truncate text-base font-bold">AICE 실무 입문 과정</p><p class="mt-1 truncate text-xs text-[#667085]">AICE_Course_Report.xlsx</p></div>
+              <div><p class="text-xs text-[#98a2b3]">Owner</p><p class="mt-1 text-sm font-bold">BO Team</p></div>
+              <div><p class="text-xs text-[#98a2b3]">Status</p><span class="mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-bold bg-[#eef2ff] text-[#5367d8]">REVIEW_PENDING</span></div>
+              <div><p class="text-xs text-[#98a2b3]">Approved</p><p class="mt-1 text-sm font-bold">1/5</p></div>
+            </button>
+            <button onclick="openCR('생성형 AI 업무 자동화 기초', 'DONE', '5/5')" class="grid grid-cols-[1fr_150px_120px_90px] items-center gap-4 rounded-2xl border p-4 text-left transition border-[#edf1f5] bg-[#f8fafc] hover:border-[#7d93f6]">
+              <div class="min-w-0"><p class="truncate text-base font-bold">생성형 AI 업무 자동화 기초</p><p class="mt-1 truncate text-xs text-[#667085]">GenAI_Automation_CR.xlsx</p></div>
+              <div><p class="text-xs text-[#98a2b3]">Owner</p><p class="mt-1 text-sm font-bold">OP</p></div>
+              <div><p class="text-xs text-[#98a2b3]">Status</p><span class="mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-bold bg-[#e8f7ef] text-[#14804a]">DONE</span></div>
+              <div><p class="text-xs text-[#98a2b3]">Approved</p><p class="mt-1 text-sm font-bold">5/5</p></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 통계 -->
+        <div class="grid min-h-0 gap-4 content-start">
+          <section class="rounded-2xl bg-[#7d93f6] p-5 text-white shadow-[0_16px_38px_rgba(125,147,246,0.24)]">
+            <p class="text-sm text-white/80">전체 CR 작업</p>
+            <strong class="mt-6 block text-4xl">3</strong>
+            <p class="mt-2 text-xs text-white/75">등록된 운영계획서 자동화 작업</p>
+          </section>
+          <section class="rounded-2xl bg-white p-5 shadow-sm">
+            <p class="text-sm text-[#667085]">진행 중</p>
+            <strong class="mt-6 block text-4xl">2</strong>
+            <p class="mt-2 text-xs text-[#8a94a6]">검토 또는 피드백 필요</p>
+          </section>
+          <section class="rounded-2xl bg-white p-5 shadow-sm">
+            <p class="text-sm text-[#667085]">완료</p>
+            <strong class="mt-6 block text-4xl">1</strong>
+            <p class="mt-2 text-xs text-[#8a94a6]">Docs/PDF 내보내기 완료</p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         뷰 2: Review (AI 초안 검토)
+    ════════════════════════════════════════ -->
+    <div id="view-review" class="tab-content min-h-0 overflow-y-auto">
+      <div class="grid gap-4">
+
+        <!-- 초안 없을 때 안내 -->
+        <div id="reviewEmpty" class="rounded-2xl bg-white p-10 shadow-sm text-center">
+          <p class="text-4xl mb-4">🤖</p>
+          <p class="font-bold text-lg">아직 생성된 초안이 없습니다</p>
+          <p class="mt-2 text-sm text-[#667085]">Projects 탭에서 CR을 업로드하면 AI가 운영계획서 초안을 자동 생성합니다.</p>
+          <button onclick="switchView('projects')" class="mt-5 rounded-xl bg-[#111827] px-5 py-2.5 text-sm font-bold text-white">CR 업로드하러 가기</button>
+        </div>
+
+        <!-- 초안 있을 때 -->
+        <div id="reviewContent" class="hidden grid gap-4">
+
+          <!-- 과정 개요 -->
+          <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-[#7d93f6]">과정 개요</p>
+                <h2 id="draftCourseName" class="mt-1 text-lg font-bold">-</h2>
+              </div>
+              <div class="flex gap-2 text-xs text-[#667085]">
+                <span>기간: <strong id="draftPeriod">-</strong></span>
+                <span>·</span>
+                <span>시수: <strong id="draftHours">-</strong></span>
+                <span>·</span>
+                <span>인원: <strong id="draftStudents">-</strong></span>
+              </div>
+            </div>
+            <p id="draftObjectives" class="text-sm text-[#344054] leading-6">-</p>
+          </div>
+
+          <!-- AI 피드백 입력 -->
+          <div class="rounded-2xl border-2 border-[#7d93f6] bg-[#f0f3ff] p-5">
+            <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-[#5367d8] mb-2">AI Chat · 피드백 입력</p>
+            <p class="text-xs text-[#667085] mb-3">수정이 필요한 부분을 자유롭게 입력하세요. AI가 반영하여 전체 초안을 재생성합니다.</p>
+            <textarea id="feedbackInput" rows="3" placeholder="예) 2차시 학습목표를 더 구체적으로 작성해주세요. 실습 항목에 예상 소요시간을 추가해주세요." class="w-full rounded-xl border border-[#c7d0fa] px-4 py-3 text-sm focus:outline-none focus:border-[#7d93f6] bg-white"></textarea>
+            <div class="mt-3 flex gap-2">
+              <button onclick="refineDraft()" class="rounded-xl bg-[#7d93f6] px-5 py-2 text-sm font-bold text-white hover:bg-[#6070d4]">🔄 AI 재생성</button>
+              <button onclick="clearFeedback()" class="rounded-xl border border-[#c7d0fa] px-4 py-2 text-sm text-[#667085] hover:bg-white">초기화</button>
+            </div>
+          </div>
+
+          <!-- 차시별 초안 -->
+          <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-[#7d93f6] mb-3">차시별 초안</p>
+            <div id="sessionList" class="grid gap-3"></div>
+          </div>
+
+          <!-- 산정사유 -->
+          <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-[#7d93f6] mb-3">학습소요시간 산정사유</p>
+            <div id="timeList" class="grid gap-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         뷰 3: Plan Items (실습/프로젝트 승인)
+    ════════════════════════════════════════ -->
+    <div id="view-plan" class="tab-content min-h-0 overflow-y-auto">
+      <div class="rounded-2xl bg-white p-5 shadow-sm">
+        <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-[#7d93f6] mb-1">Plan Items</p>
+        <h2 class="text-lg font-bold mb-4">실습 / 프로젝트 승인</h2>
+        <div id="projectsEmpty" class="text-center py-10">
+          <p class="text-[#667085] text-sm">CR 초안 생성 후 AI가 탐지한 실습/프로젝트가 여기에 표시됩니다.</p>
+        </div>
+        <table id="projectTable" class="hidden w-full text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-[#f0f3f9]">
+              <th class="text-left py-2 px-3 text-xs text-[#98a2b3] font-bold">번호</th>
+              <th class="text-left py-2 px-3 text-xs text-[#98a2b3] font-bold">유형</th>
+              <th class="text-left py-2 px-3 text-xs text-[#98a2b3] font-bold">근거</th>
+              <th class="text-left py-2 px-3 text-xs text-[#98a2b3] font-bold">설명</th>
+              <th class="text-left py-2 px-3 text-xs text-[#98a2b3] font-bold">예상 산출물</th>
+              <th class="text-left py-2 px-3 text-xs text-[#98a2b3] font-bold">BO 판단</th>
+            </tr>
+          </thead>
+          <tbody id="projectRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         뷰 4: Export
+    ════════════════════════════════════════ -->
+    <div id="view-export" class="tab-content min-h-0 overflow-y-auto">
+      <div class="rounded-2xl bg-white p-10 shadow-sm text-center">
+        <p class="text-4xl mb-4">📄</p>
+        <p class="font-bold text-lg">Google Docs / PDF 내보내기</p>
+        <p class="mt-2 text-sm text-[#667085]">최종 승인된 운영계획서를 Google Docs로 자동 생성합니다.<br>이 기능은 2차 MVP에서 구현됩니다.</p>
+        <span class="mt-5 inline-block rounded-full px-4 py-2 text-xs font-bold bg-[#fff4df] text-[#a15c08]">2차 MVP 예정</span>
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<!-- ── 새 CR 업로드 모달 ── -->
+<div id="uploadModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-5 hidden">
+  <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-lg font-bold">새 CR 업로드</h3>
+      <button onclick="hideUploadModal()" class="text-[#98a2b3] hover:text-[#344054] text-xl">✕</button>
+    </div>
+
+    <p class="text-xs text-[#667085] mb-4">CR이 있는 Google Sheets 주소를 붙여넣으세요.<br>AppScript 배포 계정으로 접근 가능한 Sheets여야 합니다.</p>
+
+    <label class="block text-xs font-bold text-[#344054] mb-1.5">CR Sheets URL</label>
+    <input id="sheetsUrlInput" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." class="w-full rounded-xl border border-[#e5e9f0] px-4 py-3 text-sm focus:outline-none focus:border-[#7d93f6] mb-4">
+
+    <label class="block text-xs font-bold text-[#344054] mb-1.5">과정명 (선택)</label>
+    <input id="courseNameInput" type="text" placeholder="예) AI 기반 마케팅 콘텐츠 전략" class="w-full rounded-xl border border-[#e5e9f0] px-4 py-3 text-sm focus:outline-none focus:border-[#7d93f6] mb-5">
+
+    <div class="flex gap-3">
+      <button onclick="generateDraft()" class="flex-1 rounded-xl bg-[#7d93f6] py-3 text-sm font-bold text-white hover:bg-[#6070d4]">
+        🤖 AI 초안 생성
+      </button>
+      <button onclick="hideUploadModal()" class="rounded-xl border border-[#e5e9f0] px-5 py-3 text-sm text-[#667085] hover:bg-[#f3f6fb]">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// 상태
+// ══════════════════════════════════════
+let SCRIPT_URL   = localStorage.getItem('planb_script_url') || 'https://script.google.com/macros/s/AKfycby8G3W1jraGpZBWQFsBnomABlMzwTUwAumg6BfEOS0F76MOEMzz2S3g3tcdcJL1_gQ4/exec';
+let currentDraft = null;
+let currentCR    = null; // { name, status, approved }
+let currentUser  = null; // { email, name }
+
+// ══════════════════════════════════════
+// Supabase 설정
+// ══════════════════════════════════════
+// TODO: 아래 두 값을 실제 Supabase 프로젝트 값으로 채워주세요.
+// Supabase 대시보드 → Project Settings → API 에서 확인 가능합니다.
+// anon key는 브라우저에 노출되어도 되는 "공개용" 키입니다 (RLS로 보호되는 키).
+const SUPABASE_URL      = 'https://YOUR-PROJECT-REF.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';
+const AUTH_DOMAIN       = '@day1company.co.kr'; // 이 도메인 이메일만 로그인 시도 가능
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let pendingEmail = null; // 인증코드 전송 후, 검증 단계에서 사용할 이메일
+
+// ══════════════════════════════════════
+// 초기화
+// ══════════════════════════════════════
+if (SCRIPT_URL) document.getElementById('scriptUrlInput').value = SCRIPT_URL;
+checkAuth();
+
+// ══════════════════════════════════════
+// 인증 (Supabase 이메일 인증코드)
+// ══════════════════════════════════════
+async function checkAuth() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session && session.user && session.user.email && session.user.email.toLowerCase().endsWith(AUTH_DOMAIN)) {
+    currentUser = { email: session.user.email, name: session.user.email.split('@')[0] };
+    enterApp();
+    return;
+  }
+  // 세션은 있는데 허용 도메인이 아니면 강제 로그아웃 (방어적 처리)
+  if (session) await supabase.auth.signOut();
+  showLoginStep('email');
+  document.getElementById('appRoot').classList.add('hidden');
+}
+
+async function handleSendCode() {
+  const emailInput = document.getElementById('loginEmail');
+  const email = emailInput.value.trim().toLowerCase();
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('sendCodeBtn');
+  clearEmailError();
+
+  if (!email) {
+    setEmailError('이메일을 입력해주세요.');
+    return;
+  }
+  if (!email.includes('@')) {
+    setEmailError('올바른 이메일 형식이 아닙니다.');
+    return;
+  }
+  if (!email.endsWith(AUTH_DOMAIN)) {
+    setEmailError(AUTH_DOMAIN + ' 계정으로만 로그인할 수 있습니다. 회사 이메일을 입력해주세요.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '전송 중...';
+  try {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true }
+    });
+    if (error) throw error;
+
+    pendingEmail = email;
+    document.getElementById('codeSentEmail').textContent = email + ' ';
+    showLoginStep('code');
+  } catch (err) {
+    setEmailError('인증코드 전송에 실패했습니다: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '인증코드 받기';
+  }
+}
+
+function setEmailError(msg) {
+  const errEl = document.getElementById('loginError');
+  const emailInput = document.getElementById('loginEmail');
+  errEl.textContent = msg;
+  errEl.classList.remove('hidden');
+  emailInput.classList.remove('border-[#e5e9f0]', 'focus:border-[#7d93f6]');
+  emailInput.classList.add('border-red-400');
+}
+
+function clearEmailError() {
+  const errEl = document.getElementById('loginError');
+  const emailInput = document.getElementById('loginEmail');
+  errEl.classList.add('hidden');
+  emailInput.classList.remove('border-red-400');
+  emailInput.classList.add('border-[#e5e9f0]', 'focus:border-[#7d93f6]');
+}
+
+async function handleVerifyCode() {
+  const code = document.getElementById('loginCode').value.trim();
+  const errEl = document.getElementById('codeError');
+  const btn = document.getElementById('verifyCodeBtn');
+  errEl.classList.add('hidden');
+
+  if (!code) {
+    errEl.textContent = '인증코드를 입력해주세요.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (!pendingEmail) {
+    errEl.textContent = '이메일을 먼저 입력해주세요.';
+    showLoginStep('email');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: pendingEmail,
+      token: code,
+      type: 'email'
+    });
+    if (error) throw error;
+    if (!data.user.email.toLowerCase().endsWith(AUTH_DOMAIN)) {
+      await supabase.auth.signOut();
+      throw new Error(AUTH_DOMAIN + ' 계정만 로그인할 수 있습니다.');
+    }
+
+    currentUser = { email: data.user.email, name: data.user.email.split('@')[0] };
+    pendingEmail = null;
+    enterApp();
+  } catch (err) {
+    errEl.textContent = '인증에 실패했습니다: ' + err.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '로그인';
+  }
+}
+
+function handleBackToEmail() {
+  pendingEmail = null;
+  document.getElementById('loginCode').value = '';
+  document.getElementById('codeError').classList.add('hidden');
+  showLoginStep('email');
+}
+
+function showLoginStep(step) {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginStepEmail').classList.toggle('hidden', step !== 'email');
+  document.getElementById('loginStepCode').classList.toggle('hidden', step !== 'code');
+}
+
+async function handleLogout() {
+  await supabase.auth.signOut();
+  currentUser = null;
+  pendingEmail = null;
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginCode').value = '';
+  document.getElementById('appRoot').classList.add('hidden');
+  showLoginStep('email');
+}
+
+function enterApp() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appRoot').classList.remove('hidden');
+  document.getElementById('userName').textContent = currentUser.name;
+  document.getElementById('userEmail').textContent = currentUser.email;
+  document.getElementById('userAvatar').textContent = currentUser.name.slice(0, 2).toUpperCase();
+}
+
+// 다른 탭에서 로그인/로그아웃 시 이 탭도 동기화
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    document.getElementById('appRoot').classList.add('hidden');
+    showLoginStep('email');
+  }
+});
+
+// ══════════════════════════════════════
+// 뷰 전환
+// ══════════════════════════════════════
+function switchView(view) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => {
+    el.className = el.className
+      .replace('bg-[#7d93f6] text-white shadow-[0_12px_28px_rgba(125,147,246,0.28)]', '')
+      + ' text-[#465568] hover:bg-[#f3f6fb]';
+  });
+
+  document.getElementById('view-' + view).classList.add('active');
+
+  const navBtn = document.getElementById('nav-' + view);
+  if (navBtn) {
+    navBtn.className = navBtn.className
+      .replace('text-[#465568] hover:bg-[#f3f6fb]', '')
+      + ' bg-[#7d93f6] text-white shadow-[0_12px_28px_rgba(125,147,246,0.28)]';
+  }
+
+  const titles = {
+    projects: ['Plan-B', '기존 CR 작업을 선택하거나 새 CR을 업로드하세요.'],
+    review:   ['Review · AI Chat', '생성된 초안을 검토하고 피드백을 입력하세요.'],
+    plan:     ['Plan Items', '실습/프로젝트 후보를 확인하고 BO 판단을 입력하세요.'],
+    export:   ['Export', '최종 승인된 운영계획서를 내보냅니다.'],
+  };
+  if (titles[view]) {
+    document.getElementById('mainTitle').textContent = titles[view][0];
+    document.getElementById('mainSubtitle').textContent = titles[view][1];
+  }
+}
+
+// ══════════════════════════════════════
+// CR 선택 (기존 목록에서)
+// ══════════════════════════════════════
+function openCR(name, status, approved) {
+  currentCR = { name, status, approved };
+  document.getElementById('activeCrInfo').classList.remove('hidden');
+  document.getElementById('activeCrName').textContent = name;
+  document.getElementById('activeCrStatus').textContent = status + ' · ' + approved + ' 승인';
+  switchView('review');
+  if (currentDraft && currentDraft._crName === name) {
+    showDraftUI();
+  } else {
+    document.getElementById('reviewEmpty').classList.remove('hidden');
+    document.getElementById('reviewContent').classList.add('hidden');
+  }
+}
+
+// ══════════════════════════════════════
+// 업로드 모달
+// ══════════════════════════════════════
+function showUploadModal()  { document.getElementById('uploadModal').classList.remove('hidden'); }
+function hideUploadModal()  { document.getElementById('uploadModal').classList.add('hidden'); }
+
+// ══════════════════════════════════════
+// 설정 패널
+// ══════════════════════════════════════
+function toggleSettings() {
+  const p = document.getElementById('settingsPanel');
+  p.classList.toggle('hidden');
+}
+function saveScriptUrl() {
+  const url = document.getElementById('scriptUrlInput').value.trim();
+  if (!url) return showToast('URL을 입력해주세요.', 'err');
+  SCRIPT_URL = url;
+  localStorage.setItem('planb_script_url', url);
+  document.getElementById('settingsPanel').classList.add('hidden');
+  showToast('AppScript URL이 저장되었습니다.', 'ok');
+}
+
+// ══════════════════════════════════════
+// AI 초안 생성
+// ══════════════════════════════════════
+async function generateDraft() {
+  const sheetsUrl  = document.getElementById('sheetsUrlInput').value.trim();
+  const courseName = document.getElementById('courseNameInput').value.trim();
+  if (!sheetsUrl)  return showToast('CR Sheets URL을 입력해주세요.', 'err');
+  if (!SCRIPT_URL) return showToast('먼저 ⚙️ 설정에서 AppScript URL을 저장해주세요.', 'err');
+
+  hideUploadModal();
+  showLoading('AI가 CR 데이터를 읽고 운영계획서 초안을 생성 중입니다...');
+
+  try {
+    const res = await callScript({ action: 'generate', sheetsUrl });
+    if (!res.success) throw new Error(res.error);
+
+    currentDraft = res.data;
+    currentDraft._crName = courseName || (res.data.course_overview?.name || 'CR 작업');
+    currentCR = { name: currentDraft._crName, status: 'REVIEW_PENDING', approved: '0/5' };
+
+    document.getElementById('activeCrInfo').classList.remove('hidden');
+    document.getElementById('activeCrName').textContent = currentDraft._crName;
+    document.getElementById('activeCrStatus').textContent = 'REVIEW_PENDING · 초안 생성 완료';
+
+    renderAll(currentDraft);
+    showDraftUI();
+    switchView('review');
+    showToast('초안 생성 완료! Review 탭에서 확인하세요.', 'ok');
+  } catch (err) {
+    showToast('오류: ' + err.message, 'err');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ══════════════════════════════════════
+// AI 재생성 (피드백 반영)
+// ══════════════════════════════════════
+async function refineDraft() {
+  const feedback = document.getElementById('feedbackInput').value.trim();
+  if (!feedback)     return showToast('피드백 내용을 입력해주세요.', 'err');
+  if (!currentDraft) return showToast('먼저 초안을 생성해주세요.', 'err');
+
+  showLoading('BO 피드백을 반영하여 초안을 재생성 중입니다...');
+  try {
+    const res = await callScript({ action: 'refine', previousDraft: currentDraft, feedback });
+    if (!res.success) throw new Error(res.error);
+
+    currentDraft = { ...res.data, _crName: currentDraft._crName };
+    renderAll(currentDraft);
+    document.getElementById('feedbackInput').value = '';
+    showToast('재생성 완료! 수정된 내용을 확인하세요.', 'ok');
+  } catch (err) {
+    showToast('오류: ' + err.message, 'err');
+  } finally {
+    hideLoading();
+  }
+}
+
+function clearFeedback() { document.getElementById('feedbackInput').value = ''; }
+
+// ══════════════════════════════════════
+// AppScript 호출
+// ══════════════════════════════════════
+async function callScript(payload) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload),
+    redirect: 'follow'
+  });
+  if (!res.ok) throw new Error('서버 오류 ' + res.status);
+  return res.json();
+}
+
+// ══════════════════════════════════════
+// 렌더링
+// ══════════════════════════════════════
+function showDraftUI() {
+  document.getElementById('reviewEmpty').classList.add('hidden');
+  document.getElementById('reviewContent').classList.remove('hidden');
+}
+
+function renderAll(draft) {
+  const ov = draft.course_overview || {};
+  document.getElementById('draftCourseName').textContent  = ov.name         || '-';
+  document.getElementById('draftObjectives').textContent  = ov.objectives   || '-';
+  document.getElementById('draftPeriod').textContent      = ov.period        || '-';
+  document.getElementById('draftHours').textContent       = ov.total_hours  || '-';
+  document.getElementById('draftStudents').textContent    = ov.student_count || '-';
+
+  renderSessions(draft.sessions  || []);
+  renderTime(draft.sessions      || []);
+  renderProjects(draft.projects  || []);
+}
+
+function renderSessions(sessions) {
+  document.getElementById('sessionList').innerHTML = sessions.length === 0
+    ? '<p class="text-sm text-[#98a2b3]">차시 정보가 없습니다.</p>'
+    : sessions.map(s => `
+        <div class="rounded-xl border border-[#f0f3f9] overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 bg-[#f8fafc]">
+            <div>
+              <p class="font-bold text-sm">${esc(s.no)}차시. ${esc(s.title)}</p>
+              <p class="text-xs text-[#98a2b3] mt-0.5">재생시간 ${esc(s.duration || '[검토 필요]')}</p>
+            </div>
+            <span class="rounded-full px-2.5 py-1 text-[11px] font-bold ${s.warning ? 'bg-[#fff4df] text-[#a15c08]' : 'bg-[#eef2ff] text-[#5367d8]'}">${s.warning ? '검토 필요' : 'REVIEW_PENDING'}</span>
+          </div>
+          <div class="grid grid-cols-2 divide-x divide-[#f0f3f9]">
+            <div class="p-4"><p class="text-[11px] font-bold text-[#98a2b3] mb-2">학습내용 초안</p><p class="text-sm text-[#344054] leading-6">${esc(s.summary)}</p></div>
+            <div class="p-4">
+              <p class="text-[11px] font-bold text-[#98a2b3] mb-2">학습목표 초안</p>
+              <textarea class="w-full rounded-lg border border-[#e5e9f0] px-3 py-2 text-sm" rows="4">${esc(s.objective)}</textarea>
+              <div class="flex gap-2 mt-2">
+                <button class="rounded-lg border border-[#e5e9f0] px-3 py-1.5 text-xs hover:bg-[#f3f6fb]">수정 저장</button>
+                <button class="rounded-lg bg-[#111827] text-white px-3 py-1.5 text-xs">승인</button>
+              </div>
+            </div>
+          </div>
+          ${s.warning ? `<div class="px-4 py-2 bg-[#fff4df] text-xs text-[#a15c08]">⚠️ ${esc(s.warning)}</div>` : ''}
+        </div>`).join('');
+}
+
+function renderTime(sessions) {
+  document.getElementById('timeList').innerHTML = sessions.length === 0
+    ? '<p class="text-sm text-[#98a2b3]">산정사유 정보가 없습니다.</p>'
+    : sessions.map(s => `
+        <div class="rounded-xl border border-[#f0f3f9] overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 bg-[#f8fafc]">
+            <p class="font-bold text-sm">${esc(s.no)}차시. ${esc(s.title)}</p>
+            <span class="rounded-full px-2.5 py-1 text-[11px] font-bold ${s.warning ? 'bg-[#fff4df] text-[#a15c08]' : 'bg-[#e8f7ef] text-[#14804a]'}">${s.warning ? '검토 필요' : '기준 적합'}</span>
+          </div>
+          <div class="p-4">
+            <textarea class="w-full rounded-lg border border-[#e5e9f0] px-3 py-2 text-sm" rows="4">${esc(s.time)}</textarea>
+            <div class="flex gap-2 mt-2">
+              <button class="rounded-lg border border-[#e5e9f0] px-3 py-1.5 text-xs hover:bg-[#f3f6fb]">수정 저장</button>
+              <button class="rounded-lg bg-[#111827] text-white px-3 py-1.5 text-xs">승인</button>
+            </div>
+          </div>
+        </div>`).join('');
+}
+
+function renderProjects(projects) {
+  if (projects.length === 0) {
+    document.getElementById('projectsEmpty').classList.remove('hidden');
+    document.getElementById('projectTable').classList.add('hidden');
+    return;
+  }
+  document.getElementById('projectsEmpty').classList.add('hidden');
+  document.getElementById('projectTable').classList.remove('hidden');
+  document.getElementById('projectRows').innerHTML = projects.map(p => `
+    <tr class="border-b border-[#f0f3f9]">
+      <td class="py-3 px-3">${esc(p.no)}</td>
+      <td class="py-3 px-3"><span class="rounded-full px-2.5 py-1 text-[11px] font-bold bg-[#eef2ff] text-[#5367d8]">${esc(p.type)}</span></td>
+      <td class="py-3 px-3 text-xs text-[#667085]">${esc(p.source)}</td>
+      <td class="py-3 px-3 text-xs">${esc(p.summary)}</td>
+      <td class="py-3 px-3 text-xs">${esc(p.output)}</td>
+      <td class="py-3 px-3">
+        <select>
+          <option>검토 대기</option><option>사용</option><option>수정 후 사용</option><option>제외</option>
+        </select>
+      </td>
+    </tr>`).join('');
+}
+
+// ══════════════════════════════════════
+// 유틸
+// ══════════════════════════════════════
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text || 'AI가 처리 중입니다...';
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type === 'ok' ? 'bg-[#16794f] text-white' : type === 'err' ? 'bg-red-600 text-white' : 'bg-[#111827] text-white');
+  setTimeout(() => { t.className = 'toast bg-[#111827] text-white'; }, 3500);
+}
+
+// 설정 패널 외부 클릭 시 닫기
+document.addEventListener('click', e => {
+  const panel = document.getElementById('settingsPanel');
+  if (!panel.contains(e.target) && !e.target.closest('[onclick="toggleSettings()"]')) {
+    panel.classList.add('hidden');
+  }
+});
+</script>
+
+
+</body></html>
