@@ -14,11 +14,12 @@ function doGet(e) {
   }
 
   // action 파라미터가 없으면 프론트엔드(로그인 화면 포함 HTML)를 서빙
-  return HtmlService
-    .createHtmlOutputFromFile('planb')
-    .setTitle('Plan-B')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  // TODO: update needed - frontend moved to Vercel (plan-b-site-henna.vercel.app), so the login screen served below is commented out.
+  // return HtmlService
+    // .createHtmlOutputFromFile('planb')
+    // .setTitle('Plan-B')
+    // .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    // .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function handleGetApi(e) {
